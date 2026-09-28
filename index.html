@@ -1,1 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
 
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+  <title>Tree QR Scanner</title>
+
+  <script src="https://unpkg.com/html5-qrcode"
+          type="text/javascript"></script>
+
+  <style>
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4faf6;
+      color: #1f2937;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: #1b7f4d;
+      color: white;
+      padding: 18px 20px;
+      text-align: center;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .header p {
+      margin: 5px 0 0;
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .container {
+      width: min(430px, 94vw);
+      margin: 20px auto;
+    }
+
+    .card {
+      background: white;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.08);
+    }
+
+    .scanner-title {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+
+    .scanner-title strong {
+      display: block;
+      font-size: 17px;
+    }
+
+    .scanner-title span {
+      display: block;
+      margin-top: 5px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    #qrReader {
+      width: 100%;
+      overflow: hidden;
+      border-radius: 14px;
+      background: #000;
+    }
+
+    #status {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 10px;
+      background: #eaf6ef;
+      color: #125c38;
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .result {
+      display: none;
+      margin-top: 15px;
+      padding: 15px;
+      border-radius: 12px;
+      background: #eaf6ef;
+      text-align: center;
+    }
+
+    .result-label {
+      font-size: 11px;
+      color: #6b7280;
+    }
+
+    .tree-id {
+      margin-top: 5px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #1b7f4d;
+    }
+
+    button {
+      width: 100%;
+      border: none;
+      border-radius: 10px;
+      padding: 13px;
+      font-size: 15px;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+
+    .start-btn {
+      background: #1b7f4d;
+      color: white;
+    }
+
+    .cancel-btn {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .error {
+      background: #fef2f2 !important;
+      color: #b91c1c !important;
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+  <div class="header">
+
+    <h1>🌳 Tree QR Scanner</h1>
+
+    <p>Tree CO₂ Dashboard</p>
+
+  </div>
+
+
+  <div class="container">
+
+    <div class="card">
+
+      <div class="scanner-title">
+
+        <strong>Scan Tree QR Code</strong>
+
+        <span>
+          Point the rear camera at the Tree QR code
+        </span>
+
+      </div>
+
+
+      <div id="qrReader"></div>
+
+
+      <div id="status">
+        Starting camera...
+      </div>
+
+
+      <div id="result" class="result">
+
+        <div class="result-label">
+          Tree ID detected
+        </div>
+
+        <div id="treeId"
+             class="tree-id">
+        </div>
+
+      </div>
+
+
+      <button
+        class="cancel-btn"
+        onclick="closeScanner()">
+
+        Cancel
+
+      </button>
+
+    </div>
+
+  </div>
+
+
+<script>
+
+  let scanner = null;
+
+  let scanCompleted = false;
+
+
+  /* ==========================================
+     START SCANNER
+     ========================================== */
+
+  function startScanner() {
+
+    const status =
+      document.getElementById("status");
+
+
+    status.innerText =
+      "Requesting camera permission...";
+
+
+    if (
+      typeof Html5Qrcode === "undefined"
+    ) {
+
+      status.innerText =
+        "QR scanner library failed to load.";
+
+      status.classList.add("error");
+
+      return;
+
+    }
+
+
+    scanner =
+      new Html5Qrcode("qrReader");
+
+
+    scanner.start(
+
+      {
+        facingMode: "environment"
+      },
+
+      {
+        fps: 10,
+
+        qrbox: {
+          width: 250,
+          height: 250
+        }
+
+      },
+
+
+      function(decodedText) {
+
+        if (scanCompleted) {
+          return;
+        }
+
+
+        const treeId =
+          String(decodedText || "").trim();
+
+
+        console.log(
+          "QR detected:",
+          treeId
+        );
+
+
+        /*
+         * Validate Tree ID
+         */
+
+        if (
+          !/^TREE\d+$/i.test(treeId)
+        ) {
+
+          status.innerText =
+            "Invalid Tree QR: " + treeId;
+
+          status.classList.add("error");
+
+          return;
+
+        }
+
+
+        scanCompleted = true;
+
+
+        /*
+         * Display result
+         */
+
+        document.getElementById(
+          "treeId"
+        ).innerText = treeId;
+
+
+        document.getElementById(
+          "result"
+        ).style.display = "block";
+
+
+        status.classList.remove(
+          "error"
+        );
+
+
+        status.innerText =
+          "Tree QR scanned successfully.";
+
+
+        /*
+         * Stop camera
+         */
+
+        stopScanner();
+
+
+        /*
+         * Return Tree ID to opener
+         */
+
+        if (
+          window.opener &&
+          !window.opener.closed
+        ) {
+
+          window.opener.postMessage(
+
+            {
+              type: "TREE_QR_RESULT",
+
+              treeId: treeId
+            },
+
+            "*"
+
+          );
+
+
+          setTimeout(
+            function() {
+
+              window.close();
+
+            },
+            500
+          );
+
+        }
+
+      },
+
+
+      function(errorMessage) {
+
+        /*
+         * Normal QR scan errors are ignored.
+         */
+
+      }
+
+    )
+
+    .then(function() {
+
+      status.innerText =
+        "Camera ready — scan Tree QR.";
+
+    })
+
+    .catch(function(error) {
+
+      console.error(
+        "CAMERA ERROR:",
+        error
+      );
+
+
+      status.innerText =
+        "Camera could not be started.";
+
+
+      status.classList.add(
+        "error"
+      );
+
+
+      alert(
+
+        "Unable to access camera.\n\n" +
+
+        "Error: " +
+
+        (
+          error && error.name
+            ? error.name
+            : "Unknown"
+        ) +
+
+        "\n\n" +
+
+        (
+          error && error.message
+            ? error.message
+            : String(error)
+        )
+
+      );
+
+    });
+
+  }
+
+
+  /* ==========================================
+     STOP SCANNER
+     ========================================== */
+
+  function stopScanner() {
+
+    if (!scanner) {
+      return;
+    }
+
+
+    const currentScanner =
+      scanner;
+
+
+    scanner = null;
+
+
+    currentScanner.stop()
+
+      .then(function() {
+
+        try {
+
+          currentScanner.clear();
+
+        } catch (e) {}
+
+      })
+
+      .catch(function(error) {
+
+        console.log(
+          "Scanner stop:",
+          error
+        );
+
+      });
+
+  }
+
+
+  /* ==========================================
+     CANCEL
+     ========================================== */
+
+  function closeScanner() {
+
+    stopScanner();
+
+
+    if (
+      window.opener &&
+      !window.opener.closed
+    ) {
+
+      window.opener.postMessage(
+
+        {
+          type: "TREE_QR_CANCEL"
+        },
+
+        "*"
+
+      );
+
+    }
+
+
+    setTimeout(
+      function() {
+
+        window.close();
+
+      },
+      200
+    );
+
+  }
+
+
+  /* ==========================================
+     PAGE LOAD
+     ========================================== */
+
+  window.addEventListener(
+    "load",
+    function() {
+
+      setTimeout(
+        startScanner,
+        500
+      );
+
+    }
+  );
+
+</script>
+
+</body>
+
+</html>
